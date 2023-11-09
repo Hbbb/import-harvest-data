@@ -1,7 +1,5 @@
 import { HARVEST_ACCESS_TOKEN, HARVEST_ACCOUNT_ID } from './constants'
-import { TimeEntry, TimeEntryResponse } from './types'
-
-const baseUrl = 'https://api.harvestapp.com/v2/time_entries'
+import { HARVEST_API_URL, TimeEntry, TimeEntryResponse } from './types'
 
 const ui = SpreadsheetApp.getUi()
 ui.createMenu('Import Harvest Data')
@@ -34,9 +32,10 @@ function fetchHarvestTimeEntries(
 		muteHttpExceptions: true,
 	}
 
-	const url = `${baseUrl}?from=${from}&to=${to}`
-
-	const response = UrlFetchApp.fetch(baseUrl, options)
+	const response = UrlFetchApp.fetch(
+		`${HARVEST_API_URL}?from=${from}&to=${to}`,
+		options,
+	)
 
 	if (response.getResponseCode() === 200) {
 		const timeEntries: TimeEntryResponse = JSON.parse(response.getContentText())
@@ -51,7 +50,7 @@ function appendTimeEntriesToSheet(timeEntries: TimeEntry[]): void {
 	const ss = SpreadsheetApp.getActiveSpreadsheet()
 	const sheet = ss.getSheetByName(sheetName) || ss.insertSheet(sheetName)
 
-	const dataToAppend = timeEntries.map((entry: TimeEntry) => [
+	const entryRows = timeEntries.map((entry: TimeEntry) => [
 		entry.id, // _harvest_id
 		entry.spent_date, // Date
 		entry.hours, // Hours
@@ -65,13 +64,11 @@ function appendTimeEntriesToSheet(timeEntries: TimeEntry[]): void {
 		range = sheet.getRange(startRow, 1)
 	}
 
-	if (dataToAppend.length > 0) {
-		const startColumn = 1 // Column A for _harvest_id
-		const numRows = dataToAppend.length
-		const numColumns = dataToAppend[0].length // Should be 4 now (ID, Date, Hours, Rate)
+	if (entryRows.length > 0) {
+		const column = 1
+		const rowCount = entryRows.length
+		const columnCount = entryRows[0].length
 
-		sheet
-			.getRange(startRow, startColumn, numRows, numColumns)
-			.setValues(dataToAppend)
+		sheet.getRange(startRow, column, rowCount, columnCount).setValues(entryRows)
 	}
 }
