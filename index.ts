@@ -48,7 +48,23 @@ function fetchHarvestTimeEntries(
 function appendTimeEntriesToSheet(timeEntries: TimeEntry[]): void {
 	const sheetName = 'Harvest Data'
 	const ss = SpreadsheetApp.getActiveSpreadsheet()
-	const sheet = ss.getSheetByName(sheetName) || ss.insertSheet(sheetName)
+	const sheet = ss.getSheetByName(sheetName)
+
+	if (!sheet) {
+		throw new Error(`Sheet "${sheetName}" not found`)
+	}
+
+	const existingIdsRange = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1) // Adjust if header is not in the first row
+	const existingIds = existingIdsRange.getValues().flat()
+
+	// Filter out entries that already exist in the sheet.
+	const uniqueEntries = timeEntries.filter(
+		(entry) => !existingIds.includes(entry.id),
+	)
+
+	if (uniqueEntries.length === 0) {
+		return // No new entries to add
+	}
 
 	const entryRows = timeEntries.map((entry: TimeEntry) => [
 		entry.id, // _harvest_id
@@ -57,18 +73,15 @@ function appendTimeEntriesToSheet(timeEntries: TimeEntry[]): void {
 		entry.billable_rate, // Rate
 	])
 
-	let startRow = 2
-	let range = sheet.getRange(startRow, 1)
-	while (range.getValue() && startRow < sheet.getMaxRows()) {
-		startRow++
-		range = sheet.getRange(startRow, 1)
-	}
+	const startRow = 2
+	const startColumn = 1
+	const numColumns = entryRows[0].length
 
-	if (entryRows.length > 0) {
-		const column = 1
-		const rowCount = entryRows.length
-		const columnCount = entryRows[0].length
+	// Insert rows before the second row.
+	sheet.insertRowsBefore(startRow, entryRows.length)
 
-		sheet.getRange(startRow, column, rowCount, columnCount).setValues(entryRows)
-	}
+	// Set the new data at the beginning of the sheet after the header.
+	sheet
+		.getRange(startRow, startColumn, entryRows.length, numColumns)
+		.setValues(entryRows)
 }
