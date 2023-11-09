@@ -66,3 +66,5 @@ export interface TimeEntry {
 export interface TimeEntryResponse {
 	time_entries: TimeEntry[]
 }
+
+export const HARVEST_API_URL = 'https://api.harvestapp.com/v2/time_entries'
