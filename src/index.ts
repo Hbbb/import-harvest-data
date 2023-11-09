@@ -1,13 +1,17 @@
 import { HARVEST_ACCESS_TOKEN, HARVEST_ACCOUNT_ID } from './constants'
 import { HARVEST_API_URL, TimeEntry, TimeEntryResponse } from './types'
 
+if (!HARVEST_ACCESS_TOKEN || !HARVEST_ACCOUNT_ID) {
+	throw new Error('Missing Harvest credentials')
+}
+
 const ui = SpreadsheetApp.getUi()
 ui.createMenu('Import Harvest Data')
 	.addItem('Import Harvest Data', 'importTimeEntries')
 	.addToUi()
 
 function importTimeEntries() {
-	const today = Utilities.formatDate(new Date(), 'GMT-7', 'yyyy/MM/dd')
+	const today = Utilities.formatDate(new Date(), 'GMT-7', 'yyyy-MM-dd')
 	const timeEntries = fetchHarvestTimeEntries(today, today)
 	if (!timeEntries) {
 		throw new Error('No time entries for today')
@@ -57,6 +61,13 @@ function appendTimeEntriesToSheet(timeEntries: TimeEntry[]): void {
 	const existingIdsRange = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1) // Adjust if header is not in the first row
 	const existingIds = existingIdsRange.getValues().flat()
 
+	Logger.log('Last Row: ', sheet.getLastRow())
+
+	Logger.log(
+		'Existing IDs: ',
+		existingIds.map((id) => `${id} (${typeof id})`),
+	)
+
 	// Filter out entries that already exist in the sheet.
 	const uniqueEntries = timeEntries.filter(
 		(entry) => !existingIds.includes(entry.id),
@@ -84,4 +95,11 @@ function appendTimeEntriesToSheet(timeEntries: TimeEntry[]): void {
 	sheet
 		.getRange(startRow, startColumn, entryRows.length, numColumns)
 		.setValues(entryRows)
+
+	// Set the formula in the 5th column for each of the new rows.
+	for (let i = 0; i < entryRows.length; i++) {
+		const formulaCell = sheet.getRange(startRow + i, 5)
+		const formula = `=PRODUCT(C${startRow + i}, D${startRow + i})`
+		formulaCell.setFormula(formula)
+	}
 }
