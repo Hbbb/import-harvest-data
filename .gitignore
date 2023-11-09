@@ -1,3 +1,5 @@
 http/
+build/
 appsscript.json
 .clasp.json
+secrets.json
