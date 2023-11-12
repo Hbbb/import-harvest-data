@@ -10,9 +10,22 @@ ui.createMenu('Import Harvest Data')
 	.addItem('Import Harvest Data', 'importTimeEntries')
 	.addToUi()
 
+const sheetName = 'Harvest Data'
+const ss = SpreadsheetApp.getActiveSpreadsheet()
+const sheet = ss.getSheetByName(sheetName) as GoogleAppsScript.Spreadsheet.Sheet
+
 function importTimeEntries() {
+	let fetchFromDate = new Date()
+
+	const lastImportDate = sheet.getRange(2, 2, 1, 1).getValues().flat()
+	if (lastImportDate.length > 0 && lastImportDate[0]) {
+		fetchFromDate = new Date(lastImportDate[0])
+	}
+
+	const fetchFrom = Utilities.formatDate(fetchFromDate, 'GMT-7', 'yyyy-MM-dd')
 	const today = Utilities.formatDate(new Date(), 'GMT-7', 'yyyy-MM-dd')
-	const timeEntries = fetchHarvestTimeEntries(today, today)
+
+	const timeEntries = fetchHarvestTimeEntries(fetchFrom, today)
 	if (!timeEntries) {
 		throw new Error('No time entries for today')
 	}
@@ -50,10 +63,6 @@ function fetchHarvestTimeEntries(
 }
 
 function appendTimeEntriesToSheet(timeEntries: TimeEntry[]): void {
-	const sheetName = 'Harvest Data'
-	const ss = SpreadsheetApp.getActiveSpreadsheet()
-	const sheet = ss.getSheetByName(sheetName)
-
 	if (!sheet) {
 		throw new Error(`Sheet "${sheetName}" not found`)
 	}
